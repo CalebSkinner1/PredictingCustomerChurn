@@ -212,9 +212,26 @@ result |> roc_auc(truth = Exited, .pred_1 )
 conf_mat(result, estimate = .pred_class, truth = Exited)
 
 ```
+
+# PCA Analysis
+
+The 21.85 % of the variability observed in the data set is explained by component 1
+
+The 38.74 % of the variability observed in the data set is explained by first two components
+
+he 55.43 % of the variability observed in the data set is explained by first three components
+
+he 71.97% of the variability observed in the data set is explained by first four components
+
+he 88.43 % of the variability observed in the data set is explained by five two components
+
+The rate of change in variance slightly drops up to the second component and then levels off up to component 5.Based on the scree plot, the first five components are enough to retain 75% of the variability of the data set. These components are then used to create the data set for the random forest machine learning model.
+
+
+
 ```{r}
 
-# Creating PCA data set
+# PCA Analysis
 
 dim(cust_dat)
 
