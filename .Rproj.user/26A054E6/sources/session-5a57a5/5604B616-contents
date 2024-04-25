@@ -1,0 +1,92 @@
+# Caleb Skinner
+# March 29, 2024
+# Applied Time Series Analysis
+
+# HW10
+
+library("ISLR")
+library("tidymodels")
+library("janitor")
+library("ranger")
+
+# Problem 1
+# In the ISLR R package, there is a dataset called OJ. The data contains 1070
+# purchases where the customer purchased Citrus Hill or Minute Maid Orange Juice.
+# Several characteristics of the customer and product are recorded.
+# Fit a classifier with a random forest using tidymodels
+
+# load in data
+oj <- OJ %>% as_tibble() %>% clean_names()
+
+oj %>% glimpse()
+
+# split data and create folds
+set.seed(1128)
+oj_split <- initial_split(oj, prop = .75, purchase)
+oj_train <- training(oj_split)
+oj_test <- testing(oj_split)
+
+oj_folds <- vfold_cv(oj_train, v = 5, strata = purchase)
+
+# create model
+rf_spec <- rand_forest(trees = 100,
+                       mtry = tune(),
+                       min_n = tune()) %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+# create recipe
+oj_rec <- recipe(purchase ~ ., data = oj_train)
+
+# tune model
+tuning_grid <- grid_regular(
+  mtry(range = c(1, 10)),
+  min_n(range = c(30, 60)),
+  levels = 10)
+
+oj_workflow <- workflow() %>%
+  add_recipe(oj_rec) %>%
+  add_model(rf_spec)
+
+{st <- Sys.time()
+
+tune_results <- tune_grid(
+  object = oj_workflow,
+  resamples = oj_folds,
+  grid = tuning_grid,
+  metrics = metric_set(accuracy))
+
+et <- Sys.time()
+# how long did this take? For me, it took 31.16 seconds
+et - st}
+
+# what are the ideal parameters? mtry = 8, min_n = 53
+best_params <- select_best(tune_results, "accuracy")
+best_params
+
+# final model
+oj_fit <- finalize_workflow(
+  oj_workflow,
+  best_params) %>% fit(data = oj_train)
+
+# train results: 87.4% accurate and relatively mixed misclassification
+oj_train_results <- augment(oj_fit, new_data = oj_train)
+
+oj_train_results %>%
+  accuracy(truth = purchase, estimate = .pred_class)
+
+oj_train_results %>%
+  conf_mat(truth = purchase, estimate = .pred_class)
+
+# test results: 78.8% accurate and relatively mixed misclassification
+oj_test_results <- augment(oj_fit, new_data = oj_test)
+
+oj_test_results %>%
+  accuracy(truth = purchase, estimate = .pred_class)
+
+oj_test_results %>%
+  conf_mat(truth = purchase, estimate = .pred_class)
+
+# Pretty solid model, predicted correctly 78.8% of the time on test data
+
+

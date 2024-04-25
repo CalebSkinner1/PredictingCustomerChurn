@@ -1,0 +1,99 @@
+# Caleb Skinner
+# April 6, 2024
+# Applied Time Series Analysis
+
+# HW11 Part 2
+
+# Use PCA on the mtcars data (again, do not use vs and am).
+# Now do k-means clustering on the first two principal components.
+# Again, tune the number of clusters. Construct a scatterplot of the first two
+# principal components and color code the points based on the cluster.
+
+library("tidymodels")
+library("tidyverse"); theme_set(theme_minimal())
+library("tidyclust")
+library("janitor")
+
+# load data
+cars <- mtcars %>% as_tibble() %>% clean_names()
+
+# pca recipe
+pca_recipe <- recipe(~., data = cars) %>%
+  step_rm(vs, am) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_numeric_predictors(), num_comp = 2)
+
+# prep data and bake it into new tibble with two dimensions
+cars_prep <- prep(pca_recipe, training = cars)
+
+cars_pca <- bake(cars_prep, cars)
+
+# we see that the first two principle components explain 86% of the variance
+summary(cars_prep$steps[[3]]$res)
+
+# cluster again with first two principle components instead of data
+cars_pca_recipe <- recipe(~., data = cars_pca)
+
+# create model and set seed
+set.seed(1128)
+kmeans_model <- k_means(num_clusters = tune()) %>%
+  set_engine("stats")
+
+# tuning grid
+tuning_grid <- grid_regular(
+  num_clusters(),
+  levels = 20)
+
+# create workflow
+cars_pca_wf <- workflow() %>%
+  add_recipe(cars_pca_recipe) %>%
+  add_model(kmeans_model)
+
+# set up cross validation, 4 folds because 4 divides into 32 evenly
+cars_pca_folds <- vfold_cv(cars_pca, v = 4)
+
+# tune model
+res <- tune_cluster(
+  cars_pca_wf,
+  resamples = cars_pca_folds,
+  grid = tuning_grid,
+  control = control_grid(save_pred = TRUE, extract = identity),
+  metrics = cluster_metric_set(sse_within_total, sse_total, sse_ratio))
+
+# display results - sse over the ten clusters
+res_metrics <- res %>% collect_metrics()
+
+res_metrics %>%
+  filter(.metric == "sse_ratio") %>%
+  ggplot(aes(x = num_clusters, y = mean)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "Number of Clusters", y = "SSE Ratio") +
+  scale_x_continuous(breaks = c(1:10))
+
+# Once again, it appears to me that 3 clusters is the ideal selection. After three clusters,
+# the reduction in the see ratio is minimal.
+
+# new model with 3 clusters
+kmeans_model3 <- k_means(num_clusters = 3) %>%
+  set_engine("stats")
+
+# new workflow
+cars3_pca_wf <- workflow() %>%
+  add_recipe(cars_pca_recipe) %>%
+  add_model(kmeans_model3)
+
+# model fit
+fit <- cars3_pca_wf %>% fit(data = cars_pca)
+
+# attach fit to data
+cars_pca_c <- bind_cols(cars, augment(fit, cars_pca))
+
+# plot data on our two pca dimensions
+cars_pca_c %>%
+  ggplot(aes(x = `PC1`, y = `PC2`, color = .pred_cluster)) +
+  geom_point() +
+  scale_color_discrete(name = "Cluster", labels = c("1", "2", "3"))
+
+# Overall, the clustering appears similar to the clustering with all nine variables
+# The only difference is the assignment of the uppermost 5 points in cluster 2.

@@ -1,0 +1,23 @@
+---
+title: "Project 2 Write Up"
+format: pdf
+---
+
+# First Part
+
+*Pick any machine learning method we have covered to predict ‘Exited‘ based on the other variables (except CustomerId and Surname). Be sure to do a training and testing split. Whatever method you choose to use, be sure to tune the model. Comment on the accuracy and confusion matrix for both the training set and the testing set.*
+
+Kevin Puorro
+
+# Second Part
+
+*Use Principal Component Analysis to reduce the number of features (again, do not use CustomerId or Surname). Choose only the number of PCs that capture 75% of the variability.*
+
+Asitha
+
+# Third Part
+
+*Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
+
+Caleb Skinner
+
