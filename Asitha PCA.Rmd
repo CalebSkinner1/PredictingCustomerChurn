@@ -264,9 +264,6 @@ pca_results <- bake(dat_prep, pca_df)
 
 print(pca_results)
 
-```
-```{r}
-
 # Create data frame with PCAs 
 
 pca_dat <- as.data.frame(pca_results)
@@ -296,7 +293,7 @@ pca_dat_cv <- vfold_cv(pca_dat_train, v=5)
 # Creating a Recipe
 
 pca_dat_recipe <- recipe(Exited ~ . , data = pca_dat_train) |>
-               step_normalize(all_numeric_predictors()) 
+               step_normalize(all_numeric_predictors())
 
 ```
 
