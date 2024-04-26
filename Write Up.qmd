@@ -13,11 +13,16 @@ library("janitor")
 library("xgboost")
 ```
 
+
 ```{r}
 
 #Let's look at the basic statistics of the data set
 
 dat <- read_csv("CustomerChurn.csv")
+
+# Remove  CustomerId and Surname
+
+dat <- dat[,-c(1,2)]
 
 summary(dat)
 
