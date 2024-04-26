@@ -76,7 +76,7 @@ Comparing methods -
 
 * Boosting: 83.5% accuracy
 * Support Vector Machine: 79.6% accuracy
-* Logistic Regression:
+* Logistic Regression: 82.14% accuracy
 * Random Forest: 
 
 Kevin Puorro
