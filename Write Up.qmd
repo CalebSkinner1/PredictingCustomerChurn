@@ -13,7 +13,7 @@ library("janitor")
 library("xgboost")
 ```
 
-There are 10,000 records in this dataset, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
+There are 10,000 records in this data set, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
 
 ```{r}
 
