@@ -13,6 +13,30 @@ library("janitor")
 library("xgboost")
 ```
 
+```{r}
+
+#Let's look at the basic statistics of the data set
+
+dat <- read_csv("CustomerChurn.csv")
+
+summary(dat)
+
+glimpse(dat)
+
+#Let's look at the  correlation matrix
+
+cust_r <- cor(dat[,-c(1,2,4,5)])
+
+corrplot(cust_r, method = "number",number.cex = 0.7)
+
+# Count missing values
+
+colSums(is.na(dat))
+
+```
+Asitha
+
+
 ```{r data}
 customer <- read_csv("CustomerChurn.csv") %>%
   clean_names() %>%
@@ -71,6 +95,8 @@ The rate of change in variance slightly drops up to the second component and the
 
 # PCA Analysis
 
+set.seed(1124)
+
 dim(cust_dat)
 
 pca_df <- cust_dat[,-c(2,3,8,9)]
@@ -84,25 +110,8 @@ summary(customer_pca, loadings = T)
 screeplot(customer_pca)
 
 
-# PCA with tidymodels
-
-pca_recipe <- recipe(Exited~., data = data_set_you_want) |>
-              step_normalize(all_numeric_predictors()) |>
-              step_pca(all_predictors(), threshold = .75) #Get enough PCs to get 75% of varianc
-
-# Prep the recipe to estimate PCA components
-
-dat_prep <- prep(pca_recipe, training = pca_df)
-
-# Extract the PCA results
-
-pca_results <- bake(dat_prep, pca_df)
-
-# View the results
-
-print(pca_results)
-
 ```
+Asitha
 
 # Third Part
 
