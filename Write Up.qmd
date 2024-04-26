@@ -13,6 +13,7 @@ library("janitor")
 library("xgboost")
 ```
 
+There are 10,000 records in this dataset, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
 
 ```{r}
 
@@ -37,6 +38,10 @@ corrplot(cust_r, method = "number",number.cex = 0.7)
 # Count missing values
 
 colSums(is.na(dat))
+
+# Frequency count of the target (Exited) variable
+
+count(dat, Exited)
 
 ```
 Asitha
