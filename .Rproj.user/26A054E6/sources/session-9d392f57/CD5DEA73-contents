@@ -13,6 +13,40 @@ library("janitor")
 library("xgboost")
 ```
 
+There are 10,000 records in this data set, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
+
+```{r}
+
+#Let's look at the basic statistics of the data set
+
+dat <- read_csv("CustomerChurn.csv")
+
+# Remove  CustomerId and Surname
+
+dat <- dat[,-c(1,2)]
+
+summary(dat)
+
+glimpse(dat)
+
+#Let's look at the  correlation matrix
+
+cust_r <- cor(dat[,-c(1,2,4,5)])
+
+corrplot(cust_r, method = "number",number.cex = 0.7)
+
+# Count missing values
+
+colSums(is.na(dat))
+
+# Frequency count of the target (Exited) variable
+
+count(dat, Exited)
+
+```
+Asitha
+
+
 ```{r data}
 customer <- read_csv("CustomerChurn.csv") %>%
   clean_names() %>%
@@ -42,7 +76,7 @@ Comparing methods -
 
 * Boosting: 83.5% accuracy
 * Support Vector Machine: 79.6% accuracy
-* Logistic Regression:
+* Logistic Regression: 82.14% accuracy
 * Random Forest: 
 
 Kevin Puorro
@@ -51,6 +85,42 @@ Kevin Puorro
 
 *Use Principal Component Analysis to reduce the number of features (again, do not use CustomerId or Surname). Choose only the number of PCs that capture 75% of the variability.*
 
+# PCA Analysis
+
+The 21.85 % of the variability observed in the data set is explained by component 1
+
+The 38.74 % of the variability observed in the data set is explained by first two components
+
+he 55.43 % of the variability observed in the data set is explained by first three components
+
+he 71.97% of the variability observed in the data set is explained by first four components
+
+he 88.43 % of the variability observed in the data set is explained by five two components
+
+The rate of change in variance slightly drops up to the second component and then levels off up to component 5.Based on the scree plot, the first five components are enough to retain 75% of the variability of the data set. These components are then used to create the data set for the random forest machine learning model.
+
+
+
+```{r}
+
+# PCA Analysis
+
+set.seed(1124)
+
+dim(cust_dat)
+
+pca_df <- cust_dat[,-c(2,3,8,9)]
+
+dim(pca_df)
+
+customer_pca <- princomp(pca_df[,-7], cor =T)
+
+summary(customer_pca, loadings = T)
+
+screeplot(customer_pca)
+
+
+```
 Asitha
 
 # Third Part
