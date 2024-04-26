@@ -1,0 +1,402 @@
+---
+title: "Project 2"
+author: "Asitha Mudiyanselage"
+output: pdf_document
+pdf_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(fpp3)
+library(tidyverse)
+library(tidymodels)
+library(mlbench)
+library(glmnet)
+library(ggplot2)
+library(GGally)
+library(corrplot)
+
+```
+
+```{r, echo = FALSE }
+
+setwd("C:/Users/Asitha_Mudiyanselage/Desktop/MSBA/Time Series/Data")
+
+dat <- read.csv("C:\\Users\\Asitha_Mudiyanselage\\Desktop\\MSBA\\Time Series\\Project\\CustomerChurn.csv")
+
+```
+
+\newpage
+
+# Q1
+
+```{r}
+
+#Let's look at the basic statistics of the data set
+
+summary(dat)
+
+glimpse(dat)
+
+#Let's look at the  correlation matrix
+
+cust_r <- cor(dat[,-c(1,2,4,5)])
+
+corrplot(cust_r, method = "number",number.cex = 0.7)
+
+# Count missing values
+
+colSums(is.na(dat))
+
+```
+ 
+\newpage
+
+
+Q2
+
+
+```{r}
+
+# Remove the first column
+
+cust_dat <- dat[,-c(1,2)]
+
+
+# Convert Exited varibale from numeric to factor
+
+cust_dat <- cust_dat |> 
+            mutate(Exited = factor(Exited))
+
+# Change the reference level of a factor variable to "1"
+
+cust_dat <- cust_dat |> 
+  mutate(Exited = relevel(Exited , ref = "1"))
+
+# Frequency count for the target variable
+
+count(cust_dat, Exited)
+```
+
+
+
+```{r}
+
+# Split the data into training and test set
+
+cust_dat_split <- cust_dat |> initial_split( prop = .7 , strata = Exited)
+
+
+cust_dat_train <- cust_dat_split |> training()
+cust_dat_test <- cust_dat_split |> testing()
+
+```
+
+
+```{r}
+
+# using V-fold cross-validation with 5 folds
+
+cust_dat_cv <- vfold_cv(cust_dat_train, v=5)
+
+# Creating a Recipe
+
+cust_dat_recipe <- recipe(Exited ~ . , data = cust_dat_train) |>
+               step_normalize(all_numeric_predictors()) |>
+               step_dummy(all_nominal_predictors())
+
+```
+
+
+```{r}
+
+# Tune the Model
+
+tuning_grid <- grid_regular(penalty(), 
+                            levels = 20 )
+
+
+log_model <- logistic_reg(penalty = tune()) |>
+             set_engine("glmnet") |>
+             set_mode("classification")
+
+# Model Tuning
+
+tune_results <- tune_grid(
+                object = workflow() |>
+                add_recipe(cust_dat_recipe) |>
+                add_model(log_model),
+                resamples = cust_dat_cv,
+                grid = tuning_grid,
+                metrics = metric_set(roc_auc, accuracy))
+
+
+# Select Best Hyperparameters
+
+best_params <- select_best(tune_results,  metric = "accuracy")
+
+```
+
+```{r}
+
+final_model <- finalize_workflow( 
+               workflow() |>
+               add_recipe(cust_dat_recipe) |>
+               add_model(log_model), best_params) |>
+               fit(data = cust_dat_train)
+
+# Summary of the final model
+
+tidy(final_model)
+
+```
+the accuracy and confusion matrix for trainnig data
+
+```{r}
+
+#  Get probabilities indicating the likelihood of each class for a given observation.
+
+dat_prob <- predict(final_model, type = "prob", new_data = cust_dat_train)
+
+dat_class <- predict(final_model, type = "class", new_data = cust_dat_train)
+
+result <- bind_cols(cust_dat_train, dat_class, dat_prob)
+
+# Calculate Accuracy
+
+result |> metrics(truth = Exited , estimate = .pred_class) |>
+               filter(.metric == "accuracy")
+
+# obtain roc curve
+
+result |> roc_curve(truth = Exited, .pred_1 ) |> autoplot()
+
+#obtain ROC AUC
+
+result |> roc_auc(truth = Exited, .pred_1 ) 
+
+# Generate and display a Confusion Matrix
+
+conf_mat(result, estimate = .pred_class, truth = Exited)
+
+```
+the accuracy and confusion matrix for testing data
+
+```{r}
+
+#  Get probabilities indicating the likelihood of each class for a given observation.
+
+dat_prob <- predict(final_model, type = "prob", new_data = cust_dat_test)
+
+dat_class <- predict(final_model, type = "class", new_data = cust_dat_test)
+
+result <- bind_cols(cust_dat_test, dat_class, dat_prob)
+
+# Calculate Accuracy
+
+result |> metrics(truth = Exited , estimate = .pred_class) |>
+               filter(.metric == "accuracy")
+
+# obtain roc curve
+
+result |> roc_curve(truth = Exited, .pred_1 ) |> autoplot()
+
+#obtain ROC AUC
+
+result |> roc_auc(truth = Exited, .pred_1 ) 
+
+# Generate and display a Confusion Matrix
+
+conf_mat(result, estimate = .pred_class, truth = Exited)
+
+```
+
+# PCA Analysis
+
+The 21.85 % of the variability observed in the data set is explained by component 1
+
+The 38.74 % of the variability observed in the data set is explained by first two components
+
+he 55.43 % of the variability observed in the data set is explained by first three components
+
+he 71.97% of the variability observed in the data set is explained by first four components
+
+he 88.43 % of the variability observed in the data set is explained by five two components
+
+The rate of change in variance slightly drops up to the second component and then levels off up to component 5.Based on the scree plot, the first five components are enough to retain 75% of the variability of the data set. These components are then used to create the data set for the random forest machine learning model.
+
+
+
+```{r}
+
+# PCA Analysis
+
+dim(cust_dat)
+
+pca_df <- cust_dat[,-c(2,3,8,9)]
+
+dim(pca_df)
+
+customer_pca <- princomp(pca_df[,-7], cor =T)
+
+summary(customer_pca, loadings = T)
+
+screeplot(customer_pca)
+
+
+# PCA with tidymodels
+
+pca_recipe <- recipe(Exited~., data = pca_df) |>
+              step_normalize(all_numeric_predictors()) |>
+              step_pca(all_predictors(), threshold = .75) #Get enough PCs to get 75% of varianc
+
+# Prep the recipe to estimate PCA components
+
+dat_prep <- prep(pca_recipe, training = pca_df)
+
+# Extract the PCA results
+
+pca_results <- bake(dat_prep, pca_df)
+
+# View the results
+
+print(pca_results)
+
+# Create data frame with PCAs 
+
+pca_dat <- as.data.frame(pca_results)
+
+
+```
+
+```{r}
+
+# Split the data into training and test set
+
+pca_dat_split <- pca_dat |> initial_split( prop = .7 , strata = Exited)
+
+pca_dat_train <- pca_dat_split |> training()
+
+pca_dat_test <- pca_dat_split |> testing()
+
+```
+
+
+```{r}
+
+# using V-fold cross-validation with 5 folds
+
+pca_dat_cv <- vfold_cv(pca_dat_train, v=5)
+
+# Creating a Recipe
+
+pca_dat_recipe <- recipe(Exited ~ . , data = pca_dat_train) |>
+               step_normalize(all_numeric_predictors())
+
+```
+
+
+```{r}
+
+# Tune the Model
+
+tuning_grid <- grid_regular(penalty(), 
+                            levels = 20 )
+
+
+log_model <- logistic_reg(penalty = tune()) |>
+             set_engine("glmnet") |>
+             set_mode("classification")
+
+# Model Tuning
+
+tune_results <- tune_grid(
+                object = workflow() |>
+                add_recipe(pca_dat_recipe) |>
+                add_model(log_model),
+                resamples = pca_dat_cv,
+                grid = tuning_grid,
+                metrics = metric_set(roc_auc, accuracy))
+
+# Select Best Hyperparameters
+
+best_params <- select_best(tune_results,  metric = "accuracy")
+
+```
+
+```{r}
+
+final_model <- finalize_workflow( 
+               workflow() |>
+               add_recipe(pca_dat_recipe) |>
+               add_model(log_model), best_params) |>
+               fit(data = pca_dat_train)
+
+# Summary of the final model
+
+tidy(final_model)
+
+```
+the accuracy and confusion matrix for pca trainnig data
+
+```{r}
+
+#  Get probabilities indicating the likelihood of each class for a given observation.
+
+dat_prob <- predict(final_model, type = "prob", new_data = pca_dat_train)
+
+dat_class <- predict(final_model, type = "class", new_data = pca_dat_train)
+
+result_pca <- bind_cols(pca_dat_train, dat_class, dat_prob)
+
+# Calculate Accuracy
+
+result_pca |> metrics(truth = Exited , estimate = .pred_class) |>
+               filter(.metric == "accuracy")
+
+# obtain roc curve
+
+result_pca |> roc_curve(truth = Exited, .pred_1 ) |> autoplot()
+
+#obtain ROC AUC
+
+result_pca |> roc_auc(truth = Exited, .pred_1 ) 
+
+# Generate and display a Confusion Matrix
+
+confusion_mat <- conf_mat(result_pca, estimate = .pred_class, truth = Exited)
+confusion_mat 
+
+```
+the accuracy and confusion matrix for pca testing data
+
+```{r}
+
+#  Get probabilities indicating the likelihood of each class for a given observation.
+
+dat_prob <- predict(final_model, type = "prob", new_data = pca_dat_test)
+
+dat_class <- predict(final_model, type = "class", new_data = pca_dat_test)
+
+result_pca <- bind_cols(pca_dat_test, dat_class, dat_prob)
+
+# Calculate Accuracy
+
+result_pca |> metrics(truth = Exited , estimate = .pred_class) |>
+               filter(.metric == "accuracy")
+
+# obtain roc curve
+
+result_pca |> roc_curve(truth = Exited, .pred_1 ) |> autoplot()
+
+#obtain ROC AUC
+
+result_pca |> roc_auc(truth = Exited, .pred_1 ) 
+
+# Generate and display a Confusion Matrix
+
+conf_mat(result_pca, estimate = .pred_class, truth = Exited)
+
+```

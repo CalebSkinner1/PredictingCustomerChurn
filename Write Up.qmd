@@ -1,11 +1,49 @@
 ---
 title: "Project 2 Write Up"
-format: pdf
+author: Kevin Puorro, Asitha Mudiyanselage, Caleb Skinner
+format:
+  pdf:
+    toc: true
 ---
+
+```{r libraries}
+library("tidyverse")
+library("tidymodels")
+library("janitor")
+library("xgboost")
+```
+
+```{r data}
+customer <- read_csv("CustomerChurn.csv") %>%
+  clean_names() %>%
+  select(-customer_id, -surname) %>%
+  mutate(
+    exited = factor(exited),
+    has_cr_card = factor(has_cr_card),
+    is_active_member = factor(is_active_member)) %>%
+  na.omit()
+
+# split data
+set.seed(1128)
+customer_split <- initial_split(customer, prop = .75, strata = exited)
+customer_train <- training(customer_split)
+customer_test <- testing(customer_split)
+
+# cross validation folds
+set.seed(1128)
+customer_folds <- vfold_cv(customer_train, v = 5, strata = exited)
+```
 
 # First Part
 
 *Pick any machine learning method we have covered to predict ‘Exited‘ based on the other variables (except CustomerId and Surname). Be sure to do a training and testing split. Whatever method you choose to use, be sure to tune the model. Comment on the accuracy and confusion matrix for both the training set and the testing set.*
+
+Comparing methods -
+
+* Boosting: 83.5% accuracy
+* Support Vector Machine: 79.6% accuracy
+* Logistic Regression:
+* Random Forest: 
 
 Kevin Puorro
 
@@ -19,5 +57,92 @@ Asitha
 
 *Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
 
-Caleb Skinner
+```{r PCA}
+# create pca df, converting binary variables into continuous
+# remove geography because cannot be converted into ordinal values
+customer2 <- customer %>%
+  mutate(
+    has_cr_card = if_else(has_cr_card == "1", 1, 0),
+    is_active_member = if_else(is_active_member == "1", 1, 0),
+    gender = if_else(gender == "Female", 0, 1),
+    exited = if_else(exited == "1", 1, 0)) %>%
+  select(-geography)
+
+pca_recipe <- recipe(exited ~ ., data = customer2) |>
+              step_normalize(all_numeric_predictors()) |>
+              step_pca(all_predictors(), threshold = .75)
+
+# Prep the recipe to estimate PCA components
+
+customer_prep_pca <- prep(pca_recipe, training = customer2)
+
+# Extract the PCA results
+
+customer_pca <- bake(customer_prep_pca, customer2) %>%
+  mutate(
+    exited = factor(exited),
+    geography = customer$geography)
+
+# View the results
+tidy(customer_prep_pca, number = 2, type = "variance") %>%
+  filter(terms == "cumulative percent variance") %>%
+  ggplot() +
+  geom_line(aes(x = component, y = value)) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9)) +
+  geom_hline(yintercept = 75, linetype = "dashed") +
+  labs(x = "Component", y = "Cumulative Percent Variance")
+
+set.seed(1128)
+pca_split <- customer_pca |> initial_split(prop = .75, strata = exited)
+
+pca_train <- pca_split |> training()
+
+pca_test <- pca_split |> testing()
+pca_folds <- vfold_cv(pca_train, v = 5)
+```
+
+```{r pca rf}
+rf_spec <- rand_forest(trees = 100,
+                       mtry = tune(),
+                       min_n = tune()) %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors())
+
+rf_tuning_grid <- grid_regular(
+  mtry(range = c(3, 6)),
+  min_n(range = c(40, 50)),
+  levels = 10)
+
+rf_pca_tune_results <- tune_grid(
+  object = workflow() %>%
+    add_recipe(rf_pca_rec) %>%
+    add_model(rf_spec),
+  resamples = pca_folds,
+  grid = rf_tuning_grid,
+  metrics = metric_set(accuracy))
+
+best_params <- select_best(rf_pca_tune_results, "accuracy")
+best_params
+
+pca_rf_final <- finalize_workflow(
+  workflow() %>%
+    add_recipe(rf_pca_rec) %>%
+    add_model(rf_spec),
+  best_params) %>%
+  fit(data = pca_train)
+
+predictions <- augment(pca_rf_final, new_data = pca_test)
+
+metrics(predictions, truth = exited, estimate = .pred_class)
+conf_mat(predictions, truth = exited, estimate = .pred_class)
+```
+
+
+Caleb
+
+
 
