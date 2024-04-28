@@ -12,6 +12,14 @@ library("tidymodels")
 library("janitor")
 library("xgboost")
 library("vip")
+library("flextable")
+```
+
+```{r, include = FALSE}
+set_flextable_defaults(
+  font.size = 10, theme_fun = theme_apa,
+  padding = 6,
+  background.color = "#EFEFEF")
 ```
 
 \newpage
@@ -169,7 +177,7 @@ screeplot(customer_pca)
 
 Now, we use our seven components to predict the customer exiting the market with a random forest model. We added geography back into the data set, because geography was removed to perform the principal component analysis. As with before, we use 75% of the data in a training set and 25% in a testing set. We also use five fold cross validation to tune the mtry and min_n parameters in the model. This random forest has 500 trees.
 
-The tuning selected mtry = 4 and min_n = 42.
+The tuning selected mtry = 5 and min_n = 43.
 
 ```{r pca rf}
 set.seed(1128)
@@ -191,7 +199,7 @@ rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
   step_dummy(all_nominal_predictors())
 
 rf_tuning_grid <- grid_regular(
-  mtry(range = c(3, 5)),
+  mtry(range = c(4, 6)),
   min_n(range = c(40, 50)),
   levels = 10)
 
@@ -216,22 +224,23 @@ rf_pca_final <- finalize_workflow(
 predictions <- augment(rf_pca_final, new_data = pca_test)
 ```
 
-Overall, the model accurately classifies the exiting customer ___ 
+Overall, the model accurately classifies the exiting customer 82.41% of the time. The kappa estimate is 31.4%, showing that the model is not accurately predicting both outcomes at equal rates.
 
 ```{r pca rf}
-metrics(predictions, truth = exited, estimate = .pred_class)
+metrics(predictions, truth = exited, estimate = .pred_class) %>%
+  flextable() %>%
+  align(align = "center") %>%
+  colformat_double(j = 3, digits = 4)
 ```
 
-The confusion matrix suggests that the model
+The findings of the confusion matrix fits with the kappa estimate. The model accurately classifies 28.6% of the customers who exit. Of the 222 customers the model classifies as exiters, 146 (65.77%) actually exit.
 
 ```{r pca rf}
 conf_mat(predictions, truth = exited, estimate = .pred_class)
 ```
 
-We also looked at variable importance measurements for the model. This shows which variables are most significant in the classification of the customer. It's difficult to interpret the principal components, but it is interesting to see which components are most significant.
+We also looked at variable importance measurements for the model. This shows which variables are most significant in the classification of the customer. It's difficult to interpret the principal components, but it is interesting to see which components are most significant. THe most important two variables are PC1 and living in Germany.
 
 ```{r}
 vip(rf_pca_final)
 ```
-
-
