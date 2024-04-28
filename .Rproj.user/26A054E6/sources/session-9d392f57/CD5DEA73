@@ -3,7 +3,7 @@
     "path": "~/Desktop/Rock Chucks/Baylor/8th Semester/Time Series/Project/Time-Series-Project2/Write Up.qmd",
     "project_path": "Write Up.qmd",
     "type": "quarto_markdown",
-    "hash": "3716915874",
+    "hash": "1681619700",
     "contents": "",
     "dirty": false,
     "created": 1714081048218.0,
@@ -13,15 +13,15 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "185,35",
-        "scrollLine": "172"
+        "cursorPosition": "233,17",
+        "scrollLine": "229"
     },
     "folds": "22|48|50|0|\n145|27|163|0|\n",
-    "lastKnownWriteTime": 1714266812,
+    "lastKnownWriteTime": 1714267294,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1714266812365,
+    "last_content_update": 1714267294604,
     "read_only": false,
     "read_only_alternatives": []
 }

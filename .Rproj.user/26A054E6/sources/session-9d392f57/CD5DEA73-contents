@@ -167,7 +167,7 @@ screeplot(customer_pca)
 
 *Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
 
-Now, we use our seven components to predict the customer exiting the market with a random forest model. As with before, we use 75% of the data in a training set and 25% in a testing set. We also use five fold cross validation to tune the mtry and min_n parameters in the model. This random forest has 500 trees.
+Now, we use our seven components to predict the customer exiting the market with a random forest model. We added geography back into the data set, because geography was removed to perform the principal component analysis. As with before, we use 75% of the data in a training set and 25% in a testing set. We also use five fold cross validation to tune the mtry and min_n parameters in the model. This random forest has 500 trees.
 
 The tuning selected mtry = 4 and min_n = 42.
 
@@ -191,8 +191,8 @@ rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
   step_dummy(all_nominal_predictors())
 
 rf_tuning_grid <- grid_regular(
-  mtry(range = c(4, 5)),
-  min_n(range = c(40, 45)),
+  mtry(range = c(3, 5)),
+  min_n(range = c(40, 50)),
   levels = 10)
 
 rf_pca_tune_results <- tune_grid(
@@ -216,10 +216,22 @@ rf_pca_final <- finalize_workflow(
 predictions <- augment(rf_pca_final, new_data = pca_test)
 ```
 
+Overall, the model accurately classifies the exiting customer ___ 
+
 ```{r pca rf}
 metrics(predictions, truth = exited, estimate = .pred_class)
+```
+
+The confusion matrix suggests that the model
+
+```{r pca rf}
 conf_mat(predictions, truth = exited, estimate = .pred_class)
 ```
 
+We also looked at variable importance measurements for the model. This shows which variables are most significant in the classification of the customer. It's difficult to interpret the principal components, but it is interesting to see which components are most significant.
+
+```{r}
+vip(rf_pca_final)
+```
 
 
