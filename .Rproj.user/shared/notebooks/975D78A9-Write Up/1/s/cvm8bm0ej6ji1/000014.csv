@@ -1,0 +1,12 @@
+"0","rf_spec <- rand_forest(trees = 500,
+                       mtry = tune(),
+                       min_n = tune()) %>%
+  set_engine(""randomforest"", importance = TRUE) %>%
+  set_mode(""classification"")
+"
+"1","[1m[33mError[39m in `set_engine()`:[22m
+[33m![39m Engine 'randomforest' is not supported for `rand_forest()`. See `show_engines('rand_forest')`.
+Backtrace:
+[90m 1. [39m... %>% set_mode(""classification"")
+[90m 4. [39m[1m[94mparsnip:::set_engine.model_spec([39m[22m., ""randomforest"", importance = TRUE[1m[94m)[39m[22m
+"

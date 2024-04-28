@@ -18,6 +18,8 @@ library("vip")
 
 There are 10,000 records in this data set, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
 
+There is no high correlation between any variables, and there are no missing values in this dataset. The scales of the CreditScore and EstimatedSalary differ from the other variables. This indicates that scaling the dataset is necessary before applying a machine learning model.
+
 ```{r basic summary statistics, include = FALSE}
 
 #Let's look at the basic statistics of the data set
@@ -111,7 +113,8 @@ customer_prep_pca <- prep(pca_recipe, training = customer2)
 
 customer_pca <- bake(customer_prep_pca, customer2) %>%
   mutate(
-    exited = factor(exited))
+    exited = factor(exited),
+    geography = customer$geography)
 ```
 
 We perform principal component analysis to reduce the number of features in the data set. The geography variable is categorical, and categorical variables cannot be represented well in PCA, so we remove it from our data set.
@@ -166,7 +169,7 @@ screeplot(customer_pca)
 
 Now, we use our seven components to predict the customer exiting the market with a random forest model. As with before, we use 75% of the data in a training set and 25% in a testing set. We also use five fold cross validation to tune the mtry and min_n parameters in the model. This random forest has 500 trees.
 
-The tuning selected mtry = and min_n = 
+The tuning selected mtry = 4 and min_n = 42.
 
 ```{r pca rf}
 set.seed(1128)
@@ -180,7 +183,7 @@ pca_folds <- vfold_cv(pca_train, v = 5)
 rf_spec <- rand_forest(trees = 500,
                        mtry = tune(),
                        min_n = tune()) %>%
-  set_engine("randomforest", importance = TRUE) %>%
+  set_engine("randomForest", importance = TRUE) %>%
   set_mode("classification")
 
 rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
@@ -188,8 +191,8 @@ rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
   step_dummy(all_nominal_predictors())
 
 rf_tuning_grid <- grid_regular(
-  mtry(range = c(2, 4)),
-  min_n(range = c(40, 50)),
+  mtry(range = c(4, 5)),
+  min_n(range = c(40, 45)),
   levels = 10)
 
 rf_pca_tune_results <- tune_grid(
@@ -207,17 +210,15 @@ rf_pca_final <- finalize_workflow(
   workflow() %>%
     add_recipe(rf_pca_rec) %>%
     add_model(rf_spec),
-  best_params) %>%
+  rf_pca_best_params) %>%
   fit(data = pca_train)
 
-predictions <- augment(pca_rf_final, new_data = pca_test)
+predictions <- augment(rf_pca_final, new_data = pca_test)
 ```
 
 ```{r pca rf}
 metrics(predictions, truth = exited, estimate = .pred_class)
 conf_mat(predictions, truth = exited, estimate = .pred_class)
-
-vip()
 ```
 
 
