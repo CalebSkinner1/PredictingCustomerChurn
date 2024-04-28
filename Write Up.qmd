@@ -7,16 +7,18 @@ format:
 ---
 
 ```{r libraries}
-library("tidyverse")
+library("tidyverse"); theme_set(theme_minimal())
 library("tidymodels")
 library("janitor")
 library("xgboost")
+library("vip")
 ```
 
-There are 10,000 records in this data set, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
-There is no high correlation between any variables, and there are no missing values in this dataset. The scales of the CreditScore and EstimatedSalary differ from the other variables. This indicates that scaling the dataset is necessary before applying a machine learning model.
+\newpage
 
-```{r}
+There are 10,000 records in this data set, consisting of 6 continuous variables, two categorical variables, and three numeric binary variables.
+
+```{r basic summary statistics, include = FALSE}
 
 #Let's look at the basic statistics of the data set
 
@@ -32,7 +34,7 @@ glimpse(dat)
 
 #Let's look at the  correlation matrix
 
-cust_r <- cor(dat[,-c(,2,3)])
+cust_r <- cor(dat[,-c(1,2,4,5)])
 
 corrplot(cust_r, method = "number",number.cex = 0.7)
 
@@ -45,8 +47,6 @@ colSums(is.na(dat))
 count(dat, Exited)
 
 ```
-Asitha
-
 
 ```{r data}
 customer <- read_csv("CustomerChurn.csv") %>%
@@ -69,7 +69,7 @@ set.seed(1128)
 customer_folds <- vfold_cv(customer_train, v = 5, strata = exited)
 ```
 
-# First Part
+# Predicint 
 
 *Pick any machine learning method we have covered to predict ‘Exited‘ based on the other variables (except CustomerId and Surname). Be sure to do a training and testing split. Whatever method you choose to use, be sure to tune the model. Comment on the accuracy and confusion matrix for both the training set and the testing set.*
 
@@ -82,51 +82,11 @@ Comparing methods -
 
 Kevin Puorro
 
-# Second Part
+\newpage
+
+# PCA Analysis
 
 *Use Principal Component Analysis to reduce the number of features (again, do not use CustomerId or Surname). Choose only the number of PCs that capture 75% of the variability.*
-
-# PCA Analysis
-
-The 21.85 % of the variability observed in the data set is explained by component 1
-
-The 38.74 % of the variability observed in the data set is explained by first two components
-
-he 55.43 % of the variability observed in the data set is explained by first three components
-
-he 71.97% of the variability observed in the data set is explained by first four components
-
-he 88.43 % of the variability observed in the data set is explained by five two components
-
-The rate of change in variance slightly drops up to the second component and then levels off up to component 5.Based on the scree plot, the first five components are enough to retain 75% of the variability of the data set. These components are then used to create the data set for the random forest machine learning model.
-
-
-
-```{r}
-
-# PCA Analysis
-
-set.seed(1124)
-
-dim(cust_dat)
-
-pca_df <- cust_dat[,-c(2,3,8,9)]
-
-dim(pca_df)
-
-customer_pca <- princomp(pca_df[,-7], cor =T)
-
-summary(customer_pca, loadings = T)
-
-screeplot(customer_pca)
-
-
-```
-Asitha
-
-# Third Part
-
-*Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
 
 ```{r PCA}
 # create pca df, converting binary variables into continuous
@@ -151,9 +111,14 @@ customer_prep_pca <- prep(pca_recipe, training = customer2)
 
 customer_pca <- bake(customer_prep_pca, customer2) %>%
   mutate(
-    exited = factor(exited),
-    geography = customer$geography)
+    exited = factor(exited))
+```
 
+We perform principal component analysis to reduce the number of features in the data set. The geography variable is categorical, and categorical variables cannot be represented well in PCA, so we remove it from our data set.
+
+Overall, the data is not reduced well by Principal Component Analysis. In order to explain 75% of the variance in the data, we need to include 7 of the 9 components. These 7 components explain 82.41% of the data.
+
+```{r PCA}
 # View the results
 tidy(customer_prep_pca, number = 2, type = "variance") %>%
   filter(terms == "cumulative percent variance") %>%
@@ -161,22 +126,61 @@ tidy(customer_prep_pca, number = 2, type = "variance") %>%
   geom_line(aes(x = component, y = value)) +
   scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9)) +
   geom_hline(yintercept = 75, linetype = "dashed") +
-  labs(x = "Component", y = "Cumulative Percent Variance")
-
-set.seed(1128)
-pca_split <- customer_pca |> initial_split(prop = .75, strata = exited)
-
-pca_train <- pca_split |> training()
-
-pca_test <- pca_split |> testing()
-pca_folds <- vfold_cv(pca_train, v = 5)
+  labs(x = "Component", title = "Cumulative Percent Variance", y = "")
 ```
 
+The percent variance explained by each individual component is obviously highest for component 1, and it slightly decreases for the next few components. The third through seventh components explain roughly the same amount of data. Overall the first seven components are enough to explain 82% of the data. These seven components are then used in the random forest model in Part Three.
+
+```{r PCA}
+tidy(customer_prep_pca, number = 2, type = "variance") %>%
+  filter(terms == "percent variance") %>%
+  ggplot() +
+  geom_line(aes(x = component, y = value)) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9)) +
+  labs(x = "Component", y = "Percent Variance Explained")
+```
+
+```{r PCA, include = FALSE}
+# PCA Analysis
+
+set.seed(1124)
+
+dim(cust_dat)
+
+pca_df <- cust_dat[,-c(2,3,8,9)]
+
+dim(pca_df)
+
+customer_pca <- princomp(pca_df[,-7], cor =T)
+
+summary(customer_pca, loadings = T)
+
+screeplot(customer_pca)
+
+
+```
+
+# Third Part
+
+*Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
+
+Now, we use our seven components to predict the customer exiting the market with a random forest model. As with before, we use 75% of the data in a training set and 25% in a testing set. We also use five fold cross validation to tune the mtry and min_n parameters in the model. This random forest has 500 trees.
+
+The tuning selected mtry = and min_n = 
+
 ```{r pca rf}
-rf_spec <- rand_forest(trees = 100,
+set.seed(1128)
+pca_split <- customer_pca %>% initial_split(prop = .75, strata = exited)
+
+pca_train <- pca_split %>% training()
+
+pca_test <- pca_split %>% testing()
+pca_folds <- vfold_cv(pca_train, v = 5)
+
+rf_spec <- rand_forest(trees = 500,
                        mtry = tune(),
                        min_n = tune()) %>%
-  set_engine("ranger") %>%
+  set_engine("randomforest", importance = TRUE) %>%
   set_mode("classification")
 
 rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
@@ -184,7 +188,7 @@ rf_pca_rec <- recipe(exited ~ ., data = pca_train) %>%
   step_dummy(all_nominal_predictors())
 
 rf_tuning_grid <- grid_regular(
-  mtry(range = c(3, 6)),
+  mtry(range = c(2, 4)),
   min_n(range = c(40, 50)),
   levels = 10)
 
@@ -196,10 +200,10 @@ rf_pca_tune_results <- tune_grid(
   grid = rf_tuning_grid,
   metrics = metric_set(accuracy))
 
-best_params <- select_best(rf_pca_tune_results, "accuracy")
-best_params
+rf_pca_best_params <- select_best(rf_pca_tune_results, "accuracy")
+rf_pca_best_params
 
-pca_rf_final <- finalize_workflow(
+rf_pca_final <- finalize_workflow(
   workflow() %>%
     add_recipe(rf_pca_rec) %>%
     add_model(rf_spec),
@@ -207,13 +211,14 @@ pca_rf_final <- finalize_workflow(
   fit(data = pca_train)
 
 predictions <- augment(pca_rf_final, new_data = pca_test)
-
-metrics(predictions, truth = exited, estimate = .pred_class)
-conf_mat(predictions, truth = exited, estimate = .pred_class)
 ```
 
+```{r pca rf}
+metrics(predictions, truth = exited, estimate = .pred_class)
+conf_mat(predictions, truth = exited, estimate = .pred_class)
 
-Caleb
+vip()
+```
 
 
 
