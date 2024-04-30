@@ -6,6 +6,15 @@ format:
     toc: true
 ---
 
+```{r knitr}
+knitr::opts_chunk$set(
+  comment = "#", fig.height = 3, 
+  cache = FALSE, collapse = TRUE,
+  error = TRUE, echo = FALSE,
+  message = FALSE,
+  warning = FALSE)
+```
+
 ```{r libraries}
 library("tidyverse"); theme_set(theme_minimal())
 library("tidymodels")
@@ -77,9 +86,9 @@ summary(customer)
 
 \newpage
 
-*Pick any machine learning method we have covered to predict ‘exited‘ based on the other variables (except customer_id and surname). Be sure to do a training and testing split. Whatever method you choose to use, be sure to tune the model. Comment on the accuracy and confusion matrix for both the training set and the testing set.*
-
 # Random Forest
+
+*Pick any machine learning method we have covered to predict ‘exited‘ based on the other variables (except customer_id and surname). Be sure to do a training and testing split. Whatever method you choose to use, be sure to tune the model. Comment on the accuracy and confusion matrix for both the training set and the testing set.*
 
 We use a classification random forest model to predict whether a customer will exit the market. After standardizing the predictor variables, we use 100 trees and tune the mtry and min_n parameters. The tuning methods selected an mtry value of 5 and a minimum node of 45.
 
@@ -170,9 +179,9 @@ tibble(
 
 \newpage
 
-*Use Principal Component Analysis to reduce the number of features (again, do not use customer_id or surname). Choose only the number of PCs that capture 75% of the variability.*
-
 # PCA Analysis
+
+*Use Principal Component Analysis to reduce the number of features (again, do not use customer_id or surname). Choose only the number of PCs that capture 75% of the variability.*
 
 We perform principal component analysis to reduce the number of features in the data set. The geography variable is categorical, and categorical variables cannot be represented well in PCA, so we remove it from our data set.
 
@@ -252,7 +261,9 @@ tidy(customer_prep_pca, number = 2, type = "variance") %>%
   scale_y_continuous(labels = scales::label_percent())
 ```
 
-# Third Part
+\newpage
+
+# Random Forest of Principle Components
 
 *Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
 
@@ -324,4 +335,9 @@ We also looked at variable importance measurements for the model. This shows whi
 
 ```{r}
 vip(rf_pca_final)
+```
+
+# Appendix: code for all of this report
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
 ```
