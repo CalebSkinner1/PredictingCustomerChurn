@@ -329,7 +329,7 @@ predictions <- augment(rf_pca_final, new_data = pca_test)
 Overall, the model accurately classifies the exiting customer 82.41% of the time. The kappa estimate is 31.4%, showing that the model is not accurately predicting both outcomes at equal rates.
 
 
-```{r pca rf2}
+```{r}
 metrics(predictions, truth = exited, estimate = .pred_class) %>%
   flextable() %>%
   align(align = "center") %>%
@@ -340,7 +340,7 @@ metrics(predictions, truth = exited, estimate = .pred_class) %>%
 The findings of the confusion matrix fits with the kappa estimate. The model accurately classifies 28.6% of the customers who exit. Of the 222 customers the model classifies as exiters, 146 (65.77%) actually exit.
 
 
-```{r pca rf3}
+```{r}
 conf_mat(predictions, truth = exited, estimate = .pred_class)
 ```
 
@@ -348,7 +348,7 @@ conf_mat(predictions, truth = exited, estimate = .pred_class)
 We also looked at variable importance measurements for the model. This shows which variables are most significant in the classification of the customer. It's difficult to interpret the principal components, but it is interesting to see which components are most significant. THe most important two variables are PC1 and living in Germany.
 
 
-```{r pca rf4}
+```{r}
 vip(rf_pca_final)
 ```
 
