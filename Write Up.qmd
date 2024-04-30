@@ -44,7 +44,7 @@ glimpse(dat)
 
 #Let's look at the  correlation matrix
 
-cust_r <- cor(dat[,-c(1,2,4,5)])
+cust_r <- cor(dat[,-c(2,3,8,9)])
 
 corrplot(cust_r, method = "number",number.cex = 0.7)
 
