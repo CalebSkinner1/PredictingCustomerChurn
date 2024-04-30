@@ -22,11 +22,13 @@ set_flextable_defaults(
   background.color = "#EFEFEF")
 ```
 
+
 \newpage
 
 There are 10,000 records in this data set, consisting of six continuous variables, two categorical variables, and three numeric binary variables.
 
 There is no high correlation between any variables, and there are no missing values in this data set. The scales of the credit_score and estimated_salary differ from the other variables. This indicates that scaling the data set is necessary before applying a machine learning model. Below we display the basic summary statistics of the data set.
+
 
 ```{r data}
 customer <- read_csv("CustomerChurn.csv") %>%
@@ -75,6 +77,7 @@ summary(customer)
 #   align(align = "center")
 ```
 
+
 \newpage
 
 *Pick any machine learning method we have covered to predict ‘exited‘ based on the other variables (except customer_id and surname). Be sure to do a training and testing split. Whatever method you choose to use, be sure to tune the model. Comment on the accuracy and confusion matrix for both the training set and the testing set.*
@@ -82,6 +85,7 @@ summary(customer)
 # Random Forest
 
 We use a classification random forest model to predict whether a customer will exit the market. After standardizing the predictor variables, we use 100 trees and tune the mtry and min_n parameters. The tuning methods selected an mtry value of 5 and a minimum node of 45.
+
 
 ```{r random forest}
 rf_spec <- rand_forest(trees = 100,
@@ -135,7 +139,9 @@ print(train_metrics)
 print(train_conf_mat)
 ```
 
+
 The model accurately classifies the exiting customer of the training set 89.54% of the time. The kappa estimate is 63.05%, showing that the model is not accurately predicting both outcomes at equal rates. The confusion matrix shows that most of the errors come when the model mislabels exiting customers as faithful ones. From the bank's perspective, this is concerning.
+
 
 ```{r}
 predictions <- predict(rf_fitted_model, customer_test) %>%
@@ -149,15 +155,19 @@ print(test_metrics)
 print(test_conf_mat)
 ```
 
+
 The model accurately classifies the exiting customer of the test set 86.4% of the time. The kappa estimate is 50.7%, showing that the model is not accurately predicting both outcomes at equal rates.
 
 Lastly, we assessed each variable's importance in the final predictions. We found that the number of products and age are the most important variables in predicting if a customer will exit. Active membership, living in Germany, and balance are also very important predictors. The rest of the predictors seem to hold less overall value.
+
 
 ```{r}
 vip(rf_fitted_model)
 ```
 
+
 To ensure we found the most accurate model, we compare results from the Random Forest to that of several other models. Unsurprisingly, boosting (which is most similar to random forest) produces the second strongest accuracy. Logistic Regression performs decently well and the support vector machine is the least accurate.
+
 
 ```{r}
 tibble(
@@ -168,6 +178,7 @@ tibble(
   width(j = 1, width = 1.5)
 ```
 
+
 \newpage
 
 *Use Principal Component Analysis to reduce the number of features (again, do not use customer_id or surname). Choose only the number of PCs that capture 75% of the variability.*
@@ -175,6 +186,7 @@ tibble(
 # PCA Analysis
 
 We perform principal component analysis to reduce the number of features in the data set. The geography variable is categorical, and categorical variables cannot be represented well in PCA, so we remove it from our data set.
+
 
 ```{r PCA dat}
 # create pca df, converting binary variables into continuous
@@ -188,7 +200,9 @@ customer2 <- customer %>%
   select(-geography)
 ```
 
+
 The "loadings" of each component signify how much each original variable contributes to the principal component. Hence, the balance and num_of_products have the highest loadings on PC1, indicating that they are the most influential variables in the variation captured by PC1. PC2 is dominated by the age and the is_active_member, and so forth.
+
 
 ```{r}
 
@@ -226,7 +240,9 @@ customer_pca <- bake(customer_prep_pca, customer2) %>%
     geography = customer$geography)
 ```
 
+
 Overall, the data is not reduced well by Principal Component Analysis. In order to explain 75% of the variance in the data, we need to include 7 of the 9 components. These 7 components explain 82.41% of the data.
+
 
 ```{r PCA2}
 # View the results
@@ -239,7 +255,9 @@ tidy(customer_prep_pca, number = 2, type = "variance") %>%
   labs(x = "Component", title = "Cumulative Percent Variance", y = "")
 ```
 
+
 The percent variance explained by each individual component is obviously highest for component 1, and it slightly decreases for the next few components. The third through seventh components explain roughly the same amount of data. Overall the first seven components are enough to explain 82% of the data. These seven components are then used in the random forest model in Part Three.
+
 
 ```{r PCA3}
 tidy(customer_prep_pca, number = 2, type = "variance") %>%
@@ -252,6 +270,7 @@ tidy(customer_prep_pca, number = 2, type = "variance") %>%
   scale_y_continuous(labels = scales::label_percent())
 ```
 
+
 # Third Part
 
 *Redo the method you used in part 1 but this time use the PCs found in part 2 (only the PCs that account for 75% of the variability). Again, comment on the accuracy and confusion matrix for both the training and testing sets.*
@@ -259,6 +278,7 @@ tidy(customer_prep_pca, number = 2, type = "variance") %>%
 Now, we use our seven components to predict the customer exiting the market with a random forest model. We added geography back into the data set, because geography was removed to perform the principal component analysis. As with before, we use 75% of the data in a training set and 25% in a testing set. We also use five fold cross validation to tune the mtry and min_n parameters in the model. This random forest has 500 trees.
 
 The tuning selected mtry = 5 and min_n = 43.
+
 
 ```{r pca rf}
 set.seed(1128)
@@ -305,7 +325,9 @@ rf_pca_final <- finalize_workflow(
 predictions <- augment(rf_pca_final, new_data = pca_test)
 ```
 
+
 Overall, the model accurately classifies the exiting customer 82.41% of the time. The kappa estimate is 31.4%, showing that the model is not accurately predicting both outcomes at equal rates.
+
 
 ```{r pca rf2}
 metrics(predictions, truth = exited, estimate = .pred_class) %>%
@@ -314,14 +336,19 @@ metrics(predictions, truth = exited, estimate = .pred_class) %>%
   colformat_double(j = 3, digits = 4)
 ```
 
+
 The findings of the confusion matrix fits with the kappa estimate. The model accurately classifies 28.6% of the customers who exit. Of the 222 customers the model classifies as exiters, 146 (65.77%) actually exit.
+
 
 ```{r pca rf3}
 conf_mat(predictions, truth = exited, estimate = .pred_class)
 ```
 
+
 We also looked at variable importance measurements for the model. This shows which variables are most significant in the classification of the customer. It's difficult to interpret the principal components, but it is interesting to see which components are most significant. THe most important two variables are PC1 and living in Germany.
+
 
 ```{r pca rf4}
 vip(rf_pca_final)
 ```
+
