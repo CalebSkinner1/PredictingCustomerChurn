@@ -118,8 +118,7 @@ rf_recipe <- recipe(exited ~ ., data = customer_train) %>%
 rf_tuning_grid <- grid_regular(
   mtry(range = c(3, 6)),
   min_n(range = c(40, 50)),
-  levels = 10
-)
+  levels = 10)
 
 #fine tune the model
 rf_tune_results <- tune_grid(
