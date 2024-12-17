@@ -5,7 +5,7 @@ format:
   pdf:
     toc: true
 ---
-
+Predi
 ```{r knitr, include = FALSE}
 # knitr defaults
 knitr::opts_chunk$set(
@@ -25,6 +25,7 @@ library("janitor")
 library("xgboost")
 library("vip")
 library("flextable")
+library("here")
 
 ```
 
@@ -47,7 +48,7 @@ There is no high correlation between any variables, and there are no missing val
 
 ```{r data}
 # create dataset
-customer <- read_csv("CustomerChurn.csv") %>%
+customer <- read_csv(here("CustomerChurn.csv")) %>%
   clean_names() %>%
   select(-customer_id, -surname) %>%
   mutate(
